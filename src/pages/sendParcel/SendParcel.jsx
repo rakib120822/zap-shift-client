@@ -2,15 +2,15 @@ import React from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useLoaderData } from "react-router";
 import Swal from "sweetalert2";
+import useAxiosSEcure from "../../hooks/useAxiosSEcure";
+import useAuth from "../../hooks/useAuth";
 
 function SendParcel() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch,
-    control,
-  } = useForm();
+  const { register, handleSubmit, watch, control } = useForm();
+
+  const axiosSecure = useAxiosSEcure();
+  const { user } = useAuth();
+
   const serviceCenters = useLoaderData();
   const regionsDuplicate = serviceCenters.map((center) => center.region);
   const regions = [...new Set(regionsDuplicate)];
@@ -22,6 +22,7 @@ function SendParcel() {
     const districts = regionDistricts.map((d) => d.district);
     return districts;
   };
+  console.log(user);
 
   const handleSendParcel = (data) => {
     console.log(data);
@@ -46,9 +47,10 @@ function SendParcel() {
     }
 
     console.log(cost);
+    data.cost = cost;
     Swal.fire({
       title: "Agree with the Cost",
-      text: "You have to pay!",
+      text: `You have to pay! ${cost}`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -56,11 +58,15 @@ function SendParcel() {
       confirmButtonText: "Yes, take it!",
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Thanks to use Zap Shift!",
-          text: "You will get your parcel soon.",
-          icon: "success",
-        });
+        // save the parcel info into the database
+        axiosSecure
+          .post("/parcels", data)
+          .then((res) => console.log("after save in database : ", res));
+        // Swal.fire({
+        //   title: "Thanks to use Zap Shift!",
+        //   text: "You will get your parcel soon.",
+        //   icon: "success",
+        // });
       }
     });
   };
@@ -112,7 +118,7 @@ function SendParcel() {
             <input
               type="number"
               className="input w-full"
-              placeholder="Parcel Name"
+              placeholder="Parcel Weight"
               {...register("parcelWeight")}
             />
           </fieldset>
@@ -129,6 +135,7 @@ function SendParcel() {
                 type="text"
                 className="input w-full"
                 placeholder="Sender Name"
+                defaultValue={user?.displayName}
                 {...register("senderName")}
               />
             </fieldset>
@@ -136,6 +143,7 @@ function SendParcel() {
               <label className="label">Sender Email</label>
               <input
                 type="email"
+                defaultValue={user?.email}
                 className="input w-full"
                 placeholder="Sender email"
                 {...register("senderEmail")}
